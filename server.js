@@ -6,7 +6,8 @@ import { fileURLToPath } from 'url';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-const PORT = 3000;
+const PORT = process.env.PORT || 3000;
+const HOST = '0.0.0.0';
 const MIME_TYPES = {
   '.html': 'text/html; charset=utf-8',
   '.js': 'text/javascript',
@@ -47,10 +48,10 @@ const server = http.createServer((req, res) => {
   });
 });
 
-server.listen(PORT, () => {
+server.listen(PORT, HOST, () => {
   console.log(`=======================================================`);
   console.log(` RUTAS SEGURAS CIENAGA - Magdalena`);
-  console.log(` Servidor local activo en: http://localhost:${PORT}`);
-  console.log(` Abre este enlace en tu navegador para ver la aplicacion.`);
+  console.log(` Servidor activo en: http://${HOST}:${PORT}`);
+  console.log(` Listo para producción y Render.`);
   console.log(`=======================================================`);
 });
