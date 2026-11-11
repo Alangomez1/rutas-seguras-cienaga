@@ -1,4 +1,4 @@
-export type IncidentType = 'inundacion' | 'alcantarilla' | 'hueco' | 'transitable' | 'arbol';
+export type IncidentType = 'inundacion' | 'alcantarilla' | 'hueco' | 'transitable' | 'arbol' | 'precaucion';
 
 export type SeverityLevel = 'peligro' | 'precaucion' | 'transitable';
 
@@ -20,6 +20,18 @@ export interface IncidentReport {
   autor: string;
   foto?: string;
   verificado: boolean;
+}
+
+export interface RouteSuggestion {
+  id: string;
+  nombre: string;
+  origen: string;
+  destino: string;
+  distancia: string;
+  tiempo: string;
+  estado: string;
+  desvio: string;
+  coords: [number, number][];
 }
 
 export interface DynamicRealTimeRoute {
