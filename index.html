@@ -1,0 +1,2068 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>RUTAS SEGURAS CIÉNAGA | Navegación y Rutas en Tiempo Real</title>
+  <meta name="description" content="Plataforma de monitoreo de inundaciones, rutas en tiempo real y asistente de movilidad con IA para Ciénaga, Magdalena.">
+
+  <!-- Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          colors: {
+            brand: {
+              dark: '#0a192f',
+              navy: '#0f2942',
+              primary: '#0284c7',
+              accent: '#38bdf8',
+              light: '#f0f9ff'
+            },
+            radar: {
+              bg: '#030712',
+              card: '#0f172a',
+              accent: '#10b981',
+              cyan: '#06b6d4',
+              border: '#1e293b'
+            }
+          }
+        }
+      }
+    }
+  </script>
+
+  <!-- Leaflet CSS & JS -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin=""/>
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+
+  <!-- Lucide Icons -->
+  <script src="https://unpkg.com/lucide@latest"></script>
+
+  <!-- React 18 & ReactDOM & Babel -->
+  <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+  <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;600;700&display=swap');
+    * {
+      font-family: 'Plus Jakarta Sans', sans-serif;
+    }
+    .font-mono-code {
+      font-family: 'JetBrains Mono', monospace;
+    }
+
+    /* Custom Leaflet Styling */
+    .leaflet-popup-content-wrapper {
+      border-radius: 14px;
+      padding: 0;
+      overflow: hidden;
+      box-shadow: 0 12px 30px rgba(0,0,0,0.22);
+    }
+    .leaflet-popup-content {
+      margin: 0;
+      line-height: 1.4;
+    }
+    .custom-map-marker {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: 50%;
+      border: 3px solid #ffffff;
+      box-shadow: 0 4px 14px rgba(0,0,0,0.35);
+      cursor: pointer;
+      transition: transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
+    }
+    .custom-map-marker:hover {
+      transform: scale(1.22);
+      z-index: 9999 !important;
+    }
+    .pulse-danger {
+      box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.7);
+      animation: pulseDanger 1.8s infinite;
+    }
+    @keyframes pulseDanger {
+      0% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.7); }
+      70% { box-shadow: 0 0 0 14px rgba(239, 68, 68, 0); }
+      100% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0); }
+    }
+
+    /* Marcador GPS en tiempo real */
+    .live-gps-vehicle {
+      width: 38px;
+      height: 38px;
+      background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+      border: 3px solid #ffffff;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: white;
+      font-size: 18px;
+      box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.8), 0 8px 20px rgba(0,0,0,0.4);
+      animation: vehiclePulse 1.6s infinite;
+      transition: all 0.4s ease-out;
+    }
+    @keyframes vehiclePulse {
+      0% { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.8); }
+      70% { box-shadow: 0 0 0 18px rgba(16, 185, 129, 0); }
+      100% { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0); }
+    }
+
+    /* Skins Styling */
+    body.skin-institucional {
+      --bg-main: #f8fafc;
+      --bg-card: #ffffff;
+      --header-bg: #0b1f3a;
+      --sidebar-bg: #071526;
+      --accent: #0284c7;
+      --text-main: #0f172a;
+    }
+    body.skin-nocturno {
+      --bg-main: #070d18;
+      --bg-card: #0e1a2e;
+      --header-bg: #091322;
+      --sidebar-bg: #050b14;
+      --accent: #38bdf8;
+      --text-main: #f1f5f9;
+    }
+    body.skin-emergencia {
+      --bg-main: #111827;
+      --bg-card: #1f2937;
+      --header-bg: #991b1b;
+      --sidebar-bg: #7f1d1d;
+      --accent: #fbbf24;
+      --text-main: #ffffff;
+    }
+    /* SKIN 4: RADAR EN TIEMPO REAL & NAVEGACIÓN SATELITAL */
+    body.skin-radar {
+      --bg-main: #020617;
+      --bg-card: #0a0f1d;
+      --header-bg: #030712;
+      --sidebar-bg: #02040a;
+      --accent: #10b981;
+      --text-main: #f8fafc;
+    }
+    body.skin-radar .map-container-wrapper {
+      border: 2px solid #059669;
+      box-shadow: 0 0 30px rgba(16, 185, 129, 0.2);
+    }
+    body.skin-radar aside {
+      background: #030712 !important;
+      border-right: 1px solid #10b98133;
+    }
+
+    /* Efecto Radar Scanning */
+    .radar-sweep {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      width: 460px;
+      height: 460px;
+      border-radius: 50%;
+      border: 1px solid rgba(16, 185, 129, 0.35);
+      pointer-events: none;
+      z-index: 800;
+      animation: radarScan 4s linear infinite;
+      background: conic-gradient(from 0deg, rgba(16, 185, 129, 0.15) 0deg, rgba(16, 185, 129, 0) 60deg, transparent 360deg);
+    }
+    @keyframes radarScan {
+      from { transform: translate(-50%, -50%) rotate(0deg); }
+      to { transform: translate(-50%, -50%) rotate(360deg); }
+    }
+
+    /* Smooth Scrollbar */
+    ::-webkit-scrollbar {
+      width: 6px;
+      height: 6px;
+    }
+    ::-webkit-scrollbar-track {
+      background: rgba(0,0,0,0.05);
+    }
+    ::-webkit-scrollbar-thumb {
+      background: rgba(100, 116, 139, 0.4);
+      border-radius: 4px;
+    }
+  </style>
+</head>
+<body class="skin-institucional bg-slate-50 text-slate-800 transition-colors duration-300">
+  <div id="root"></div>
+
+  <!-- Main React Application Script -->
+  <script type="text/babel">
+    const { useState, useEffect, useRef } = React;
+
+    // Coordenadas oficiales de Ciénaga, Magdalena
+    const CIENAGA_CENTER = [11.0069, -74.2486];
+    const CIENAGA_BOUNDS = [
+      [10.9650, -74.2900],
+      [11.0450, -74.2050]
+    ];
+
+    // Barrios reconocidos de Ciénaga, Magdalena con coordenadas base
+    const BARRIOS_DATA = {
+      "Centro Histórico": [11.0069, -74.2486],
+      "Barrio Abajo": [11.0035, -74.2465],
+      "Miramar": [11.0135, -74.2505],
+      "La Floresta": [10.9995, -74.2415],
+      "El Carmen": [11.0085, -74.2412],
+      "París": [11.0040, -74.2380],
+      "Kennedy": [10.9910, -74.2480],
+      "Costa Verde": [11.0180, -74.2610],
+      "Cordobita": [10.9850, -74.2400],
+      "Mar de Plata": [11.0150, -74.2560],
+      "San Juan": [11.0010, -74.2520],
+      "5 de Febrero": [10.9930, -74.2420],
+      "Troncal del Caribe (Paso Urbano)": [10.9950, -74.2450]
+    };
+
+    const BARRIOS_CIENAGA = Object.keys(BARRIOS_DATA);
+
+    // Datos iniciales de demostración contextualizados en Ciénaga
+    const INITIAL_REPORTS = [
+      {
+        id: "rep-001",
+        barrio: "Barrio Abajo",
+        direccion: "Calle 13 con Carrera 9",
+        tipo: "inundacion",
+        severidad: "peligro",
+        nivelAgua: "45 cm (Nivel crítico)",
+        descripcion: "Agua estancada supera el nivel de los andenes tras lluvias continuas. Imposible el paso para motocicletas y autos bajos. Fuerte corriente hacia la Ciénaga.",
+        lat: 11.0035,
+        lng: -74.2465,
+        fecha: "Hace 20 minutos",
+        autor: "Comité Barrial Abajo",
+        foto: "https://images.unsplash.com/photo-1547683905-f686c993aae5?auto=format&fit=crop&w=600&q=80",
+        verificado: true
+      },
+      {
+        id: "rep-002",
+        barrio: "Centro Histórico",
+        direccion: "Calle 9 con Carrera 12 (Cerca al Templete)",
+        tipo: "alcantarilla",
+        severidad: "peligro",
+        nivelAgua: "30 cm",
+        descripcion: "Tapa de alcantarilla levantada por la presión del agua pluvial. No se ve a simple vista por la turbidez del agua. Peligro inminente para peatones y motos.",
+        lat: 11.0072,
+        lng: -74.2515,
+        fecha: "Hace 35 minutos",
+        autor: "Defensa Civil Ciénaga",
+        foto: "https://images.unsplash.com/photo-1518709268805-4e9042af9f23?auto=format&fit=crop&w=600&q=80",
+        verificado: true
+      },
+      {
+        id: "rep-003",
+        barrio: "Miramar",
+        direccion: "Calle 1 con Carrera 15 (Sector Playero)",
+        tipo: "inundacion",
+        severidad: "precaucion",
+        nivelAgua: "20 cm (Oleaje y lluvia)",
+        descripcion: "Encharcamiento moderado por confluencia de oleaje y lluvia. Paso transitable con lentitud sólo por el carril oriental.",
+        lat: 11.0135,
+        lng: -74.2505,
+        fecha: "Hace 50 minutos",
+        autor: "Veeduría Miramar",
+        foto: "https://images.unsplash.com/photo-1515694346937-94d85e41e6f0?auto=format&fit=crop&w=600&q=80",
+        verificado: true
+      },
+      {
+        id: "rep-004",
+        barrio: "Kennedy",
+        direccion: "Calle 28 cerca a la Troncal del Caribe",
+        tipo: "hueco",
+        severidad: "peligro",
+        nivelAgua: "35 cm",
+        descripcion: "Socavón profundo de más de 1 metro oculto bajo el agua. Ya se reportó un mototaxista varado. Evitar esta intersección completamente.",
+        lat: 10.9925,
+        lng: -74.2490,
+        fecha: "Hace 1 hora",
+        autor: "Conductor Servicio Público",
+        foto: "https://images.unsplash.com/photo-1578328819058-b69f3a3b0f6b?auto=format&fit=crop&w=600&q=80",
+        verificado: true
+      },
+      {
+        id: "rep-005",
+        barrio: "La Floresta",
+        direccion: "Carrera 21 con Calle 16",
+        tipo: "transitable",
+        severidad: "transitable",
+        nivelAgua: "Seco / 0 cm",
+        descripcion: "El canal pluvial recién intervenido funcionó al 100%. Vía totalmente seca y despejada. Recomendada como ruta de alivio hacia el oriente.",
+        lat: 10.9995,
+        lng: -74.2415,
+        fecha: "Hace 15 minutos",
+        autor: "Gestión del Riesgo Ciénaga",
+        foto: "https://images.unsplash.com/photo-1498084393753-b411b2d26b34?auto=format&fit=crop&w=600&q=80",
+        verificado: true
+      },
+      {
+        id: "rep-006",
+        barrio: "Troncal del Caribe (Paso Urbano)",
+        direccion: "Calle 24 con Carrera 10",
+        tipo: "transitable",
+        severidad: "transitable",
+        nivelAgua: "Seco",
+        descripcion: "Tránsito fluido en ambos sentidos hacia Santa Marta y Barranquilla. Desagües despejados sin empozamientos.",
+        lat: 10.9950,
+        lng: -74.2450,
+        fecha: "Hace 25 minutos",
+        autor: "Policía de Tránsito",
+        foto: "https://images.unsplash.com/photo-1477959858617-67f30bc75b82?auto=format&fit=crop&w=600&q=80",
+        verificado: true
+      },
+      {
+        id: "rep-007",
+        barrio: "El Carmen",
+        direccion: "Calle 12 con Carrera 18",
+        tipo: "precaucion",
+        severidad: "precaucion",
+        nivelAgua: "12 cm (Barro y lodo)",
+        descripcion: "Agua bajando con arrastre de lodo y ramas. Conduzca con precaución a menos de 20 km/h para evitar derrapes.",
+        lat: 11.0085,
+        lng: -74.2412,
+        fecha: "Hace 45 minutos",
+        autor: "Red de Apoyo Ciénaga",
+        foto: "https://images.unsplash.com/photo-1534274988757-a28bf1a57c17?auto=format&fit=crop&w=600&q=80",
+        verificado: false
+      },
+      {
+        id: "rep-008",
+        barrio: "Centro Histórico",
+        direccion: "Calle 7 entre Carreras 10 y 14",
+        tipo: "transitable",
+        severidad: "transitable",
+        nivelAgua: "Seco",
+        descripcion: "Corredor elevado despejado. Conexión segura hacia la Plaza Centenario y zona bancaria sin obstáculos.",
+        lat: 11.0088,
+        lng: -74.2530,
+        fecha: "Hace 10 minutos",
+        autor: "Comerciantes Unidos",
+        foto: "https://images.unsplash.com/photo-1519501025264-65ba15a82390?auto=format&fit=crop&w=600&q=80",
+        verificado: true
+      }
+    ];
+
+    // Calculador Dinámico de Rutas en Tiempo Real evitando puntos de peligro
+    function generateDynamicRoute(origenBarrio, destinoBarrio) {
+      const origCoord = BARRIOS_DATA[origenBarrio] || [10.9910, -74.2480];
+      const destCoord = BARRIOS_DATA[destinoBarrio] || [11.0088, -74.2530];
+
+      // Punto seguro de paso intermedio (La Floresta / Carrera 21 o Corredor Este)
+      const waypointSeguro = [10.9995, -74.2415];
+      const waypointCentroSeguro = [11.0070, -74.2450];
+
+      // Ruta Segura recomendada
+      const safePoints = [
+        origCoord,
+        [origCoord[0] + 0.003, origCoord[1] + 0.003],
+        waypointSeguro,
+        waypointCentroSeguro,
+        destCoord
+      ];
+
+      // Ruta Peligrosa directa (la que pasa por Barrio Abajo o zonas anegadas)
+      const dangerPoints = [
+        origCoord,
+        [10.9925, -74.2490], // Hueco Kennedy
+        [11.0035, -74.2465], // Inundación Barrio Abajo
+        [11.0072, -74.2515], // Alcantarilla Centro
+        destCoord
+      ];
+
+      return {
+        id: `dyn-route-${Date.now()}`,
+        origen: origenBarrio,
+        destino: destinoBarrio,
+        distancia: "3.2 km",
+        tiempoEstimado: "9 minutos",
+        safePoints: safePoints,
+        dangerPoints: dangerPoints,
+        peligrosEvitados: [
+          "Calle 13 Barrio Abajo (Inundación 45 cm)",
+          "Calle 9 Cra 12 Centro (Alcantarilla sin tapa)",
+          "Calle 28 Kennedy (Socavón profundo)"
+        ],
+        maniobras: [
+          `Salida desde ${origenBarrio} hacia la calzada principal.`,
+          "Desvío programado hacia Carrera 21 en La Floresta (canal funcionando).",
+          "Evadir cruce deprimido de Calle 13 por Calle 16.",
+          `Ingreso seguro y despejado al sector de ${destinoBarrio}.`
+        ]
+      };
+    }
+
+    // ==========================================
+    // COMPONENTE PRINCIPAL APP
+    // ==========================================
+    function App() {
+      const [currentView, setCurrentView] = useState('inicio');
+      const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+      
+      // Skins / Temas: 'institucional', 'nocturno', 'emergencia', 'radar'
+      const [currentSkin, setCurrentSkin] = useState('radar'); // Iniciamos en la Skin de Radar en Tiempo Real
+
+      const [reports, setReports] = useState(() => {
+        try {
+          const saved = localStorage.getItem('rutas_seguras_cienaga_reports');
+          if (saved) {
+            const parsed = JSON.parse(saved);
+            if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+          }
+        } catch (e) {
+          console.warn("Error leyendo localStorage", e);
+        }
+        return INITIAL_REPORTS;
+      });
+
+      const [filterSeveridad, setFilterSeveridad] = useState('todos');
+      const [filterBarrio, setFilterBarrio] = useState('todos');
+      const [selectedReportOnMap, setSelectedReportOnMap] = useState(null);
+
+      // Guardar en localStorage
+      useEffect(() => {
+        try {
+          localStorage.setItem('rutas_seguras_cienaga_reports', JSON.stringify(reports));
+        } catch (e) {
+          console.error("Error guardando en localStorage", e);
+        }
+      }, [reports]);
+
+      // Cambiar Skin en el body
+      useEffect(() => {
+        let classes = `skin-${currentSkin} transition-colors duration-300 `;
+        if (currentSkin === 'radar') {
+          classes += 'dark bg-[#020617] text-slate-100';
+        } else if (currentSkin === 'nocturno') {
+          classes += 'dark bg-slate-950 text-slate-100';
+        } else if (currentSkin === 'emergencia') {
+          classes += 'bg-gray-900 text-white';
+        } else {
+          classes += 'bg-slate-50 text-slate-800';
+        }
+        document.body.className = classes;
+      }, [currentSkin]);
+
+      useEffect(() => {
+        if (window.lucide) {
+          window.lucide.createIcons();
+        }
+      });
+
+      const handleAddReport = (newReport) => {
+        const updated = [newReport, ...reports];
+        setReports(updated);
+        setCurrentView('mapa');
+        setSelectedReportOnMap(newReport);
+      };
+
+      const totalReportes = reports.length;
+      const callesInundadas = reports.filter(r => r.tipo === 'inundacion').length;
+      const zonasPeligrosas = reports.filter(r => r.severidad === 'peligro').length;
+      const zonasPrecaucion = reports.filter(r => r.severidad === 'precaucion').length;
+      const viasTransitables = reports.filter(r => r.severidad === 'transitable').length;
+
+      return (
+        <div className="min-h-screen flex flex-col md:flex-row bg-slate-50 dark:bg-slate-950 transition-colors duration-200">
+          
+          {/* ============================================================== */}
+          {/* SIDEBAR LATERAL PROFESIONAL */}
+          {/* ============================================================== */}
+          <aside className={`fixed inset-y-0 left-0 z-50 w-72 bg-[#091b33] text-white flex flex-col shadow-2xl transition-transform duration-300 ease-in-out md:translate-x-0 ${mobileMenuOpen ? 'translate-x-0' : '-translate-x-full'} md:static md:w-72 md:shrink-0`}>
+            
+            {/* Header del Sidebar */}
+            <div className="p-5 border-b border-slate-800/80 bg-[#071528] flex items-center justify-between">
+              <div className="flex items-center space-x-3">
+                <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-emerald-500 to-sky-600 flex items-center justify-center shadow-lg shadow-emerald-500/30 text-white">
+                  <i data-lucide="radio" className="w-6 h-6 animate-pulse"></i>
+                </div>
+                <div>
+                  <h1 className="font-extrabold text-base tracking-wide text-white leading-tight">
+                    RUTAS SEGURAS
+                  </h1>
+                  <span className="text-xs font-semibold tracking-wider text-emerald-400 uppercase flex items-center">
+                    <span className="w-2 h-2 rounded-full bg-emerald-400 inline-block mr-1.5 animate-ping"></span>
+                    Ciénaga en Tiempo Real
+                  </span>
+                </div>
+              </div>
+              <button 
+                onClick={() => setMobileMenuOpen(false)} 
+                className="md:hidden text-slate-400 hover:text-white p-1 rounded-lg hover:bg-slate-800"
+              >
+                <i data-lucide="x" className="w-6 h-6"></i>
+              </button>
+            </div>
+
+            {/* Alerta de Clima y Radar */}
+            <div className="mx-4 my-3 p-3 rounded-xl bg-emerald-950/40 border border-emerald-800/40 flex items-center space-x-3 text-emerald-200">
+              <div className="w-8 h-8 rounded-lg bg-emerald-500/20 flex items-center justify-center shrink-0 text-emerald-400">
+                <i data-lucide="radar" className="w-5 h-5 animate-spin"></i>
+              </div>
+              <div className="text-xs leading-snug">
+                <div className="font-bold text-emerald-100 flex items-center">
+                  <span>GPS & Radar Activo</span>
+                  <span className="ml-1.5 text-[10px] bg-emerald-500/20 text-emerald-300 px-1.5 rounded">En vivo</span>
+                </div>
+                <span className="text-emerald-300/80">Monitoreo satelital y pluvial</span>
+              </div>
+            </div>
+
+            {/* Menú de Navegación */}
+            <nav className="flex-1 px-4 py-2 space-y-1 overflow-y-auto">
+              <div className="text-[11px] font-bold text-slate-400 uppercase tracking-wider px-3 py-2">
+                Navegación del Sistema
+              </div>
+
+              <button
+                onClick={() => { setCurrentView('inicio'); setMobileMenuOpen(false); }}
+                className={`w-full flex items-center space-x-3 px-4 py-3 rounded-xl font-medium text-sm transition-all duration-150 ${
+                  currentView === 'inicio' 
+                    ? 'bg-gradient-to-r from-emerald-600 to-sky-700 text-white shadow-lg shadow-emerald-900/40 font-semibold' 
+                    : 'text-slate-300 hover:bg-slate-800/60 hover:text-white'
+                }`}
+              >
+                <i data-lucide="layout-dashboard" className="w-5 h-5"></i>
+                <span>Inicio & Métricas</span>
+                {zonasPeligrosas > 0 && (
+                  <span className="ml-auto bg-red-500 text-white text-[11px] font-bold px-2 py-0.5 rounded-full">
+                    {zonasPeligrosas}
+                  </span>
+                )}
+              </button>
+
+              <button
+                onClick={() => { setCurrentView('mapa'); setMobileMenuOpen(false); }}
+                className={`w-full flex items-center space-x-3 px-4 py-3 rounded-xl font-medium text-sm transition-all duration-150 ${
+                  currentView === 'mapa' 
+                    ? 'bg-gradient-to-r from-emerald-600 to-teal-700 text-white shadow-lg shadow-emerald-900/40 font-semibold' 
+                    : 'text-slate-300 hover:bg-slate-800/60 hover:text-white'
+                }`}
+              >
+                <i data-lucide="map-pinned" className="w-5 h-5 text-emerald-400"></i>
+                <span>Mapa & Rutas en Vivo</span>
+                <span className="ml-auto text-[10px] bg-emerald-500/20 text-emerald-300 px-2 py-0.5 rounded-md font-mono font-bold">
+                  EN VIVO
+                </span>
+              </button>
+
+              <button
+                onClick={() => { setCurrentView('asistente'); setMobileMenuOpen(false); }}
+                className={`w-full flex items-center space-x-3 px-4 py-3 rounded-xl font-medium text-sm transition-all duration-150 ${
+                  currentView === 'asistente' 
+                    ? 'bg-gradient-to-r from-sky-600 to-blue-700 text-white shadow-lg shadow-sky-900/40 font-semibold' 
+                    : 'text-slate-300 hover:bg-slate-800/60 hover:text-white'
+                }`}
+              >
+                <i data-lucide="bot" className="w-5 h-5 text-sky-400"></i>
+                <span>Consultar IA</span>
+                <span className="ml-auto bg-sky-500/20 text-sky-300 text-[10px] font-bold px-2 py-0.5 rounded uppercase">
+                  Asistente
+                </span>
+              </button>
+
+              <button
+                onClick={() => { setCurrentView('reportar'); setMobileMenuOpen(false); }}
+                className={`w-full flex items-center space-x-3 px-4 py-3 rounded-xl font-medium text-sm transition-all duration-150 ${
+                  currentView === 'reportar' 
+                    ? 'bg-gradient-to-r from-amber-500 to-orange-600 text-white shadow-lg shadow-orange-900/40 font-semibold' 
+                    : 'text-slate-300 hover:bg-slate-800/60 hover:text-white'
+                }`}
+              >
+                <i data-lucide="plus-circle" className="w-5 h-5 text-amber-400"></i>
+                <span>Reportar Incidente</span>
+                <span className="ml-auto text-[10px] bg-red-600 text-white px-2 py-0.5 rounded-full font-bold">
+                  + Nuevo
+                </span>
+              </button>
+
+              <div className="pt-3">
+                <div className="text-[11px] font-bold text-slate-400 uppercase tracking-wider px-3 py-2">
+                  Asistencia y Apoyo
+                </div>
+                <button
+                  onClick={() => { setCurrentView('emergencias'); setMobileMenuOpen(false); }}
+                  className={`w-full flex items-center space-x-3 px-4 py-2.5 rounded-xl font-medium text-sm transition-all duration-150 ${
+                    currentView === 'emergencias' 
+                      ? 'bg-slate-800 text-white' 
+                      : 'text-slate-400 hover:bg-slate-800/40 hover:text-slate-200'
+                  }`}
+                >
+                  <i data-lucide="phone-call" className="w-5 h-5 text-emerald-400"></i>
+                  <span>Líneas de Emergencia</span>
+                </button>
+              </div>
+            </nav>
+
+            {/* SELECTOR DE SKINS / TEMAS (CON LA NUEVA SKIN "RADAR EN TIEMPO REAL") */}
+            <div className="p-4 mx-4 mb-4 rounded-2xl bg-[#061222] border border-slate-800 text-xs">
+              <div className="flex items-center justify-between mb-2 text-slate-300">
+                <span className="font-semibold flex items-center">
+                  <i data-lucide="palette" className="w-4 h-4 mr-1.5 text-emerald-400"></i>
+                  Skins & Visualización
+                </span>
+              </div>
+              <div className="grid grid-cols-2 gap-1.5 p-1 bg-slate-900/90 rounded-xl text-[11px]">
+                <button
+                  onClick={() => setCurrentSkin('radar')}
+                  title="Skin Radar en Tiempo Real & Cockpit Satelital"
+                  className={`py-1.5 px-2 rounded-lg text-center font-bold transition-all flex items-center justify-center space-x-1 ${
+                    currentSkin === 'radar'
+                      ? 'bg-emerald-600 text-white shadow-sm ring-1 ring-emerald-400'
+                      : 'text-emerald-400 hover:text-white'
+                  }`}
+                >
+                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-ping"></span>
+                  <span>Radar Vivo</span>
+                </button>
+
+                <button
+                  onClick={() => setCurrentSkin('institucional')}
+                  title="Skin Institucional Alcaldía / Oficial"
+                  className={`py-1.5 px-2 rounded-lg text-center font-medium transition-all ${
+                    currentSkin === 'institucional'
+                      ? 'bg-sky-600 text-white font-bold shadow-sm'
+                      : 'text-slate-400 hover:text-white'
+                  }`}
+                >
+                  Oficial
+                </button>
+
+                <button
+                  onClick={() => setCurrentSkin('nocturno')}
+                  title="Skin Tormenta Nocturna / Dark Mode"
+                  className={`py-1.5 px-2 rounded-lg text-center font-medium transition-all ${
+                    currentSkin === 'nocturno'
+                      ? 'bg-slate-700 text-white font-bold shadow-sm'
+                      : 'text-slate-400 hover:text-white'
+                  }`}
+                >
+                  Noche
+                </button>
+
+                <button
+                  onClick={() => setCurrentSkin('emergencia')}
+                  title="Skin Alerta Máxima de Rescate"
+                  className={`py-1.5 px-2 rounded-lg text-center font-medium transition-all ${
+                    currentSkin === 'emergencia'
+                      ? 'bg-red-700 text-white font-bold shadow-sm'
+                      : 'text-slate-400 hover:text-white'
+                  }`}
+                >
+                  Alerta
+                </button>
+              </div>
+            </div>
+
+            {/* Footer institucional */}
+            <div className="p-4 border-t border-slate-800/80 text-[11px] text-slate-400 bg-[#050f1d] flex items-center justify-between">
+              <div>
+                <p className="font-semibold text-slate-300">Ciénaga Resiliente 2026</p>
+                <p className="text-slate-500">Mapeo Satelital & GPS Activo</p>
+              </div>
+              <span className="px-2 py-0.5 bg-emerald-500/20 text-emerald-400 rounded-md font-mono text-[10px]">
+                v3.0 RT
+              </span>
+            </div>
+          </aside>
+
+          {/* Overlay para móvil */}
+          {mobileMenuOpen && (
+            <div 
+              onClick={() => setMobileMenuOpen(false)}
+              className="fixed inset-0 z-40 bg-black/60 backdrop-blur-sm md:hidden"
+            ></div>
+          )}
+
+          {/* ============================================================== */}
+          {/* CONTENIDO PRINCIPAL */}
+          {/* ============================================================== */}
+          <main className="flex-1 flex flex-col min-w-0 h-screen overflow-y-auto">
+            
+            {/* Topbar Superior */}
+            <header className="sticky top-0 z-30 bg-white/90 dark:bg-slate-900/90 backdrop-blur-md border-b border-slate-200 dark:border-slate-800 px-4 md:px-8 py-3.5 flex items-center justify-between shadow-xs">
+              <div className="flex items-center space-x-3">
+                <button 
+                  onClick={() => setMobileMenuOpen(true)}
+                  className="md:hidden p-2 text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg"
+                >
+                  <i data-lucide="menu" className="w-6 h-6"></i>
+                </button>
+                <div>
+                  <h2 className="text-lg font-bold text-slate-900 dark:text-white flex items-center">
+                    {currentView === 'inicio' && 'Panel de Control y Métricas Ciudadanas'}
+                    {currentView === 'mapa' && 'Mapa y Trazado de Rutas en Tiempo Real'}
+                    {currentView === 'asistente' && 'Rutas Seguras IA - Asistente de Movilidad'}
+                    {currentView === 'reportar' && 'Nuevo Reporte Ciudadano de Incidente'}
+                    {currentView === 'emergencias' && 'Directorio de Emergencias de Ciénaga'}
+                  </h2>
+                  <p className="text-xs text-slate-500 dark:text-slate-400 hidden sm:block">
+                    Municipio de Ciénaga, Magdalena &bull; Cobertura en vivo de vías y contingencias pluviales
+                  </p>
+                </div>
+              </div>
+
+              {/* Botones de acción rápida */}
+              <div className="flex items-center space-x-2">
+                <button
+                  onClick={() => { setCurrentView('mapa'); setCurrentSkin('radar'); }}
+                  className="bg-emerald-600 hover:bg-emerald-700 text-white px-3.5 py-1.5 rounded-xl text-xs md:text-sm font-semibold flex items-center space-x-1.5 shadow-md shadow-emerald-600/25 transition-transform active:scale-95"
+                >
+                  <i data-lucide="compass" className="w-4 h-4 animate-spin"></i>
+                  <span>Rutas en Vivo</span>
+                </button>
+
+                <button
+                  onClick={() => setCurrentView('reportar')}
+                  className="bg-red-600 hover:bg-red-700 text-white px-3.5 py-1.5 rounded-xl text-xs md:text-sm font-semibold flex items-center space-x-1.5 shadow-md shadow-red-600/25 transition-transform active:scale-95"
+                >
+                  <i data-lucide="alert-triangle" className="w-4 h-4"></i>
+                  <span className="hidden sm:inline">Reportar</span>
+                </button>
+              </div>
+            </header>
+
+            {/* Contenido dinámico */}
+            <div className="flex-1 p-3 md:p-6">
+              {currentView === 'inicio' && (
+                <DashboardView 
+                  reports={reports}
+                  totalReportes={totalReportes}
+                  callesInundadas={callesInundadas}
+                  zonasPeligrosas={zonasPeligrosas}
+                  zonasPrecaucion={zonasPrecaucion}
+                  viasTransitables={viasTransitables}
+                  onNavigate={setCurrentView}
+                  onSelectReport={(rep) => {
+                    setSelectedReportOnMap(rep);
+                    setCurrentView('mapa');
+                  }}
+                />
+              )}
+
+              {currentView === 'mapa' && (
+                <MapViewRealTime 
+                  reports={reports}
+                  filterSeveridad={filterSeveridad}
+                  setFilterSeveridad={setFilterSeveridad}
+                  filterBarrio={filterBarrio}
+                  setFilterBarrio={setFilterBarrio}
+                  selectedReportOnMap={selectedReportOnMap}
+                  setSelectedReportOnMap={setSelectedReportOnMap}
+                  onOpenReportForm={() => setCurrentView('reportar')}
+                  currentSkin={currentSkin}
+                />
+              )}
+
+              {currentView === 'asistente' && (
+                <AiAssistantView 
+                  reports={reports} 
+                  onNavigateToMap={(barrio) => {
+                    setFilterBarrio(barrio || 'todos');
+                    setCurrentView('mapa');
+                  }}
+                />
+              )}
+
+              {currentView === 'reportar' && (
+                <ReportIncidentView 
+                  onAddReport={handleAddReport}
+                  onCancel={() => setCurrentView('mapa')}
+                />
+              )}
+
+              {currentView === 'emergencias' && (
+                <EmergenciesView />
+              )}
+            </div>
+          </main>
+        </div>
+      );
+    }
+
+    // ==========================================
+    // VISTA MAPA EN TIEMPO REAL & TRAZADO DINÁMICO
+    // (Con Trazador de Rutas y Simulación de GPS en Vivo)
+    // ==========================================
+    function MapViewRealTime({ 
+      reports, 
+      filterSeveridad, 
+      setFilterSeveridad, 
+      filterBarrio, 
+      setFilterBarrio, 
+      selectedReportOnMap,
+      setSelectedReportOnMap,
+      onOpenReportForm,
+      currentSkin
+    }) {
+      const mapContainerRef = useRef(null);
+      const mapInstanceRef = useRef(null);
+      const markersGroupRef = useRef(null);
+      const routeLayerGroupRef = useRef(null);
+      const liveVehicleMarkerRef = useRef(null);
+      const animationTimerRef = useRef(null);
+
+      // Estado de navegación en tiempo real
+      const [origen, setOrigen] = useState("Kennedy");
+      const [destino, setDestino] = useState("Centro Histórico");
+      const [activeRoute, setActiveRoute] = useState(null);
+      const [isSimulatingGPS, setIsSimulatingGPS] = useState(false);
+      const [simProgress, setSimProgress] = useState(0);
+      const [currentSpeed, setCurrentSpeed] = useState(24);
+      const [showRadarPrecipitation, setShowRadarPrecipitation] = useState(true);
+
+      const filteredReports = reports.filter(r => {
+        const matchSeveridad = filterSeveridad === 'todos' || r.severidad === filterSeveridad;
+        const matchBarrio = filterBarrio === 'todos' || r.barrio === filterBarrio;
+        return matchSeveridad && matchBarrio;
+      });
+
+      // Inicialización del Mapa Leaflet
+      useEffect(() => {
+        if (!mapContainerRef.current) return;
+
+        if (!mapInstanceRef.current) {
+          const map = L.map(mapContainerRef.current, {
+            center: CIENAGA_CENTER,
+            zoom: 14,
+            minZoom: 12,
+            maxZoom: 18,
+            maxBounds: CIENAGA_BOUNDS
+          });
+
+          // Capa CartoDB Dark o OpenStreetMap según skin
+          L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            attribution: '&copy; OpenStreetMap | Rutas Seguras Ciénaga RT',
+            maxZoom: 19
+          }).addTo(map);
+
+          const markersGroup = L.layerGroup().addTo(map);
+          const routeGroup = L.layerGroup().addTo(map);
+
+          mapInstanceRef.current = map;
+          markersGroupRef.current = markersGroup;
+          routeLayerGroupRef.current = routeGroup;
+
+          // Capa de radar pluvial simulado sobre Ciénaga
+          L.circle([11.0069, -74.2486], {
+            radius: 2800,
+            color: '#10b981',
+            fillColor: '#0ea5e9',
+            fillOpacity: 0.12,
+            weight: 1,
+            dashArray: '4, 8'
+          }).addTo(map);
+
+          // Trazar ruta inicial por defecto (Kennedy -> Centro)
+          calculateAndDrawRoute("Kennedy", "Centro Histórico");
+        }
+
+        return () => {
+          if (animationTimerRef.current) clearInterval(animationTimerRef.current);
+        };
+      }, []);
+
+      // Función para calcular y dibujar la ruta dinámica en el mapa
+      const calculateAndDrawRoute = (orig, dest) => {
+        if (!mapInstanceRef.current || !routeLayerGroupRef.current) return;
+
+        const route = generateDynamicRoute(orig, dest);
+        setActiveRoute(route);
+
+        const routeGroup = routeLayerGroupRef.current;
+        routeGroup.clearLayers();
+
+        // 1. Trazar Ruta Peligrosa / Bloqueada en Rojo Dotted
+        const dangerPolyline = L.polyline(route.dangerPoints, {
+          color: '#ef4444',
+          weight: 4,
+          opacity: 0.7,
+          dashArray: '6, 10'
+        }).addTo(routeGroup);
+
+        dangerPolyline.bindPopup(`
+          <div class="p-3 text-xs">
+            <strong class="text-red-600 block mb-1">⚠️ Ruta Directa No Recomendada</strong>
+            <p class="text-slate-600">Este trayecto pasa por sectores con inundaciones severas y alcantarillas abiertas en Calle 13 y Calle 28.</p>
+          </div>
+        `);
+
+        // 2. Trazar Ruta Segura Alternativa en Verde Neón
+        const safePolyline = L.polyline(route.safePoints, {
+          color: '#10b981',
+          weight: 6,
+          opacity: 0.95,
+          lineJoin: 'round'
+        }).addTo(routeGroup);
+
+        safePolyline.bindPopup(`
+          <div class="p-3 text-xs">
+            <strong class="text-emerald-700 font-bold block mb-1">✅ Corredor Seguro Activo en Tiempo Real</strong>
+            <p class="text-slate-700">Trayecto verificado sin puntos de peligro crítico. Distancia: ${route.distancia} &bull; ${route.tiempoEstimado}.</p>
+          </div>
+        `);
+
+        // Ajustar zoom para mostrar la ruta completa
+        mapInstanceRef.current.fitBounds(safePolyline.getBounds(), { padding: [40, 40] });
+
+        // Si había una simulación activa, reiniciarla
+        stopGPSSimulation();
+      };
+
+      // Iniciar simulación de desplazamiento GPS en tiempo real
+      const startGPSSimulation = () => {
+        if (!activeRoute || !mapInstanceRef.current) return;
+
+        setIsSimulatingGPS(true);
+        setSimProgress(0);
+
+        const points = activeRoute.safePoints;
+        let step = 0;
+        const totalSteps = 60; // 60 ticks de animación suave
+
+        // Crear o reutilizar marcador del vehículo
+        if (!liveVehicleMarkerRef.current) {
+          const vehicleIcon = L.divIcon({
+            className: 'live-vehicle-marker-icon',
+            html: `
+              <div class="live-gps-vehicle">
+                🚗
+              </div>
+            `,
+            iconSize: [38, 38],
+            iconAnchor: [19, 19]
+          });
+
+          liveVehicleMarkerRef.current = L.marker(points[0], { icon: vehicleIcon }).addTo(mapInstanceRef.current);
+        }
+
+        if (animationTimerRef.current) clearInterval(animationTimerRef.current);
+
+        animationTimerRef.current = setInterval(() => {
+          step++;
+          const progress = step / totalSteps;
+          setSimProgress(Math.min(100, Math.round(progress * 100)));
+
+          // Interpolar posición entre los puntos
+          const totalSegments = points.length - 1;
+          const currentSegIndex = Math.min(Math.floor(progress * totalSegments), totalSegments - 1);
+          const segProgress = (progress * totalSegments) - currentSegIndex;
+
+          const p1 = points[currentSegIndex];
+          const p2 = points[currentSegIndex + 1];
+
+          if (p1 && p2) {
+            const currentLat = p1[0] + (p2[0] - p1[0]) * segProgress;
+            const currentLng = p1[1] + (p2[1] - p1[1]) * segProgress;
+
+            liveVehicleMarkerRef.current.setLatLng([currentLat, currentLng]);
+
+            // Centrar suavemente en el vehículo cada pocos frames
+            if (step % 5 === 0) {
+              mapInstanceRef.current.panTo([currentLat, currentLng], { animate: true });
+            }
+          }
+
+          // Variar velocidad simulada (22 - 30 km/h)
+          setCurrentSpeed(Math.round(22 + Math.sin(step) * 6));
+
+          if (step >= totalSteps) {
+            clearInterval(animationTimerRef.current);
+            setIsSimulatingGPS(false);
+          }
+        }, 400);
+      };
+
+      const stopGPSSimulation = () => {
+        if (animationTimerRef.current) clearInterval(animationTimerRef.current);
+        setIsSimulatingGPS(false);
+        setSimProgress(0);
+        if (liveVehicleMarkerRef.current && mapInstanceRef.current) {
+          mapInstanceRef.current.removeLayer(liveVehicleMarkerRef.current);
+          liveVehicleMarkerRef.current = null;
+        }
+      };
+
+      // Actualizar marcadores de incidentes
+      useEffect(() => {
+        if (!mapInstanceRef.current || !markersGroupRef.current) return;
+
+        const markersGroup = markersGroupRef.current;
+        markersGroup.clearLayers();
+
+        filteredReports.forEach((rep) => {
+          let bgColor = '#10b981';
+          let iconHtml = '🛡️';
+          let pulseClass = '';
+
+          if (rep.severidad === 'peligro') {
+            bgColor = '#ef4444';
+            iconHtml = '⚠️';
+            pulseClass = 'pulse-danger';
+          } else if (rep.severidad === 'precaucion') {
+            bgColor = '#f59e0b';
+            iconHtml = '⚡';
+          }
+
+          const customIcon = L.divIcon({
+            className: 'custom-leaflet-div-icon',
+            html: `
+              <div class="custom-map-marker ${pulseClass}" style="background-color: ${bgColor}; width: 34px; height: 34px; font-size: 15px;">
+                ${iconHtml}
+              </div>
+            `,
+            iconSize: [34, 34],
+            iconAnchor: [17, 17],
+            popupAnchor: [0, -18]
+          });
+
+          const marker = L.marker([rep.lat, rep.lng], { icon: customIcon });
+
+          const popupContent = `
+            <div class="text-slate-800 text-xs w-64 overflow-hidden rounded-xl font-sans">
+              ${rep.foto ? `
+                <div class="w-full h-28 overflow-hidden bg-slate-200 relative">
+                  <img src="${rep.foto}" alt="${rep.barrio}" class="w-full h-full object-cover"/>
+                  <span class="absolute top-2 left-2 px-2 py-0.5 rounded text-[10px] font-bold text-white shadow" style="background-color: ${bgColor}">
+                    ${rep.severidad === 'peligro' ? 'PELIGRO' : rep.severidad === 'precaucion' ? 'PRECAUCIÓN' : 'TRANSITABLE'}
+                  </span>
+                </div>
+              ` : ''}
+              <div class="p-3.5 space-y-2">
+                <div>
+                  <h4 class="font-bold text-sm text-slate-900 leading-snug">${rep.barrio}</h4>
+                  <p class="text-slate-500 text-[11px] font-medium">${rep.direccion}</p>
+                </div>
+                
+                <div class="bg-slate-50 p-2 rounded-lg border border-slate-100 space-y-1 text-[11px]">
+                  <div class="flex justify-between">
+                    <span class="text-slate-400">Nivel de Agua:</span>
+                    <strong class="text-slate-800">${rep.nivelAgua || 'No especificado'}</strong>
+                  </div>
+                  <div class="flex justify-between">
+                    <span class="text-slate-400">Tipo:</span>
+                    <span class="font-semibold capitalize text-slate-700">${rep.tipo}</span>
+                  </div>
+                </div>
+
+                <p class="text-slate-600 text-xs leading-relaxed">
+                  ${rep.descripcion}
+                </p>
+
+                <div class="pt-2 border-t border-slate-100 flex items-center justify-between text-[10px] text-slate-400">
+                  <span>${rep.fecha}</span>
+                  <span class="font-semibold text-slate-500">${rep.autor}</span>
+                </div>
+              </div>
+            </div>
+          `;
+
+          marker.bindPopup(popupContent);
+          marker.addTo(markersGroup);
+
+          if (selectedReportOnMap && selectedReportOnMap.id === rep.id) {
+            mapInstanceRef.current.setView([rep.lat, rep.lng], 16, { animate: true });
+            marker.openPopup();
+          }
+        });
+      }, [filteredReports, selectedReportOnMap]);
+
+      // Reajustar tamaño de mapa
+      useEffect(() => {
+        const timer = setTimeout(() => {
+          if (mapInstanceRef.current) {
+            mapInstanceRef.current.invalidateSize();
+          }
+        }, 150);
+        return () => clearTimeout(timer);
+      }, []);
+
+      const resetView = () => {
+        if (mapInstanceRef.current) {
+          mapInstanceRef.current.setView(CIENAGA_CENTER, 14, { animate: true });
+          setSelectedReportOnMap(null);
+        }
+      };
+
+      return (
+        <div className="flex flex-col h-[calc(100vh-120px)] space-y-3">
+          
+          {/* PANEL DE CONTROL DE RUTAS EN TIEMPO REAL */}
+          <div className="bg-white dark:bg-slate-900 p-3.5 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-md">
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              
+              {/* Selector de Origen y Destino */}
+              <div className="flex flex-wrap items-center gap-2 text-xs">
+                <span className="font-bold text-slate-700 dark:text-slate-200 flex items-center">
+                  <i data-lucide="navigation-2" className="w-4 h-4 mr-1 text-emerald-500"></i>
+                  Ruta en Vivo:
+                </span>
+
+                <div className="flex items-center space-x-1.5 bg-slate-100 dark:bg-slate-800 px-2.5 py-1.5 rounded-xl">
+                  <span className="text-slate-400 text-[11px]">Desde:</span>
+                  <select
+                    value={origen}
+                    onChange={(e) => {
+                      setOrigen(e.target.value);
+                      calculateAndDrawRoute(e.target.value, destino);
+                    }}
+                    className="bg-transparent font-bold text-slate-800 dark:text-slate-100 outline-none"
+                  >
+                    {BARRIOS_CIENAGA.map(b => (
+                      <option key={b} value={b} className="bg-slate-900 text-white">{b}</option>
+                    ))}
+                  </select>
+                </div>
+
+                <div className="flex items-center space-x-1.5 bg-slate-100 dark:bg-slate-800 px-2.5 py-1.5 rounded-xl">
+                  <span className="text-slate-400 text-[11px]">Hasta:</span>
+                  <select
+                    value={destino}
+                    onChange={(e) => {
+                      setDestino(e.target.value);
+                      calculateAndDrawRoute(origen, e.target.value);
+                    }}
+                    className="bg-transparent font-bold text-slate-800 dark:text-slate-100 outline-none"
+                  >
+                    {BARRIOS_CIENAGA.map(b => (
+                      <option key={b} value={b} className="bg-slate-900 text-white">{b}</option>
+                    ))}
+                  </select>
+                </div>
+
+                <button
+                  onClick={() => calculateAndDrawRoute(origen, destino)}
+                  className="bg-sky-600 hover:bg-sky-700 text-white px-3 py-1.5 rounded-xl font-bold transition-all shadow-xs flex items-center space-x-1"
+                >
+                  <i data-lucide="refresh-cw" className="w-3.5 h-3.5"></i>
+                  <span>Recalcular</span>
+                </button>
+              </div>
+
+              {/* Botón de Simulación de GPS en Tiempo Real */}
+              <div className="flex items-center space-x-2">
+                {!isSimulatingGPS ? (
+                  <button
+                    onClick={startGPSSimulation}
+                    className="bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-1.5 rounded-xl text-xs font-bold flex items-center space-x-1.5 shadow-md shadow-emerald-600/30 transition-transform active:scale-95 animate-pulse"
+                  >
+                    <i data-lucide="play" className="w-4 h-4"></i>
+                    <span>Simular Recorrido GPS</span>
+                  </button>
+                ) : (
+                  <button
+                    onClick={stopGPSSimulation}
+                    className="bg-red-600 hover:bg-red-700 text-white px-4 py-1.5 rounded-xl text-xs font-bold flex items-center space-x-1.5 shadow-md shadow-red-600/30 transition-transform active:scale-95"
+                  >
+                    <i data-lucide="square" className="w-4 h-4"></i>
+                    <span>Detener GPS ({simProgress}%)</span>
+                  </button>
+                )}
+
+                <button
+                  onClick={resetView}
+                  title="Centrar en Ciénaga"
+                  className="p-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 text-slate-700 dark:text-slate-300"
+                >
+                  <i data-lucide="compass" className="w-4 h-4"></i>
+                </button>
+              </div>
+
+            </div>
+
+            {/* Barra de Telemetría HUD de la Ruta Activa */}
+            {activeRoute && (
+              <div className="mt-2.5 pt-2.5 border-t border-slate-100 dark:border-slate-800 flex flex-wrap items-center justify-between text-xs gap-3">
+                <div className="flex items-center space-x-4">
+                  <span className="text-emerald-600 dark:text-emerald-400 font-bold flex items-center">
+                    <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 mr-1.5 animate-ping"></span>
+                    Corredor Seguro: {activeRoute.distancia} ({activeRoute.tiempoEstimado})
+                  </span>
+                  <span className="text-slate-400 hidden sm:inline">&bull;</span>
+                  <span className="text-red-500 font-medium hidden md:inline">
+                    Puntos críticos evitados: {activeRoute.peligrosEvitados.length}
+                  </span>
+                </div>
+
+                {isSimulatingGPS && (
+                  <div className="flex items-center space-x-3 font-mono-code text-[11px] bg-slate-100 dark:bg-slate-800 px-3 py-1 rounded-lg">
+                    <span className="text-emerald-400 font-bold">VEL: {currentSpeed} km/h</span>
+                    <span className="text-sky-400">PROGRESO: {simProgress}%</span>
+                    <div className="w-16 bg-slate-300 dark:bg-slate-700 h-1.5 rounded-full overflow-hidden">
+                      <div className="bg-emerald-500 h-full transition-all" style={{ width: `${simProgress}%` }}></div>
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+
+          {/* MAPA LEAFLET INTERACTIVO CON RADAR */}
+          <div className="flex-1 rounded-2xl overflow-hidden border border-slate-200 dark:border-slate-800 shadow-lg relative map-container-wrapper">
+            <div ref={mapContainerRef} className="w-full h-full min-h-[420px]"></div>
+
+            {/* Animación Radar Sweep sobre el Mapa (Skin Radar) */}
+            {currentSkin === 'radar' && (
+              <div className="radar-sweep pointer-events-none"></div>
+            )}
+
+            {/* HUD Flotante con Instrucciones Turn-by-Turn */}
+            {activeRoute && (
+              <div className="absolute top-4 left-4 z-[1000] bg-white/95 dark:bg-slate-900/95 backdrop-blur-md p-3 rounded-xl border border-slate-200 dark:border-slate-800 shadow-xl max-w-xs text-xs pointer-events-auto">
+                <div className="font-bold text-slate-800 dark:text-slate-100 flex items-center mb-1.5 text-xs">
+                  <i data-lucide="map" className="w-4 h-4 mr-1 text-emerald-500"></i>
+                  Guía de Maniobras Seguras
+                </div>
+                <div className="space-y-1 text-[11px] text-slate-600 dark:text-slate-300">
+                  {activeRoute.maniobras.map((m, idx) => (
+                    <div key={idx} className="flex items-start space-x-1.5">
+                      <span className="font-bold text-emerald-500">{idx + 1}.</span>
+                      <span>{m}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Leyenda y Convenciones en Vivo */}
+            <div className="absolute bottom-4 left-4 z-[1000] bg-white/95 dark:bg-slate-900/95 backdrop-blur-md p-3 rounded-xl border border-slate-200 dark:border-slate-800 shadow-lg text-xs space-y-1.5 pointer-events-auto max-w-[250px]">
+              <div className="font-bold text-slate-800 dark:text-slate-100 flex items-center text-xs">
+                <i data-lucide="layers" className="w-3.5 h-3.5 mr-1 text-emerald-500"></i>
+                Capas en Tiempo Real
+              </div>
+              <div className="space-y-1 text-[11px]">
+                <div className="flex items-center space-x-2">
+                  <span className="w-4 h-1 bg-emerald-500 rounded"></span>
+                  <span className="text-emerald-700 dark:text-emerald-400 font-bold">Ruta Segura Activa</span>
+                </div>
+                <div className="flex items-center space-x-2">
+                  <span className="w-4 h-1 border-b-2 border-dashed border-red-500"></span>
+                  <span className="text-red-500 font-semibold">Vía Bloqueada / Inundada</span>
+                </div>
+                <div className="flex items-center space-x-2">
+                  <span className="w-2.5 h-2.5 rounded-full bg-red-500"></span>
+                  <span className="text-slate-600 dark:text-slate-300">Punto Peligro (&gt;40 cm)</span>
+                </div>
+              </div>
+            </div>
+
+            {/* Badge de Telemetría GPS en Vivo */}
+            <div className="absolute top-4 right-4 z-[1000] bg-slate-900/90 text-white backdrop-blur-md px-3 py-1.5 rounded-xl border border-emerald-500/40 shadow-md text-[11px] font-mono-code flex items-center space-x-2">
+              <span className="w-2 h-2 rounded-full bg-emerald-400 animate-ping"></span>
+              <span>GPS: 11.0069° N, -74.2486° W &bull; RT OK</span>
+            </div>
+
+          </div>
+
+        </div>
+      );
+    }
+
+    // ==========================================
+    // VISTA DASHBOARD (KPIs & Métricas)
+    // ==========================================
+    function DashboardView({ 
+      reports, 
+      totalReportes, 
+      callesInundadas, 
+      zonasPeligrosas, 
+      zonasPrecaucion, 
+      viasTransitables, 
+      onNavigate,
+      onSelectReport 
+    }) {
+      return (
+        <div className="space-y-8 max-w-7xl mx-auto">
+          
+          <div className="relative overflow-hidden rounded-3xl bg-gradient-to-r from-[#030712] via-[#091f3a] to-[#0284c7] text-white p-6 md:p-8 shadow-xl border border-sky-900/40">
+            <div className="relative z-10 max-w-3xl space-y-3">
+              <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold bg-emerald-500/20 backdrop-blur-md text-emerald-300 border border-emerald-500/30">
+                <i data-lucide="radio" className="w-3.5 h-3.5 mr-1.5 animate-pulse"></i>
+                Sistema de Rutas y Radar en Tiempo Real
+              </span>
+              <h2 className="text-2xl md:text-3xl font-extrabold tracking-tight">
+                Protegiendo a la comunidad de Ciénaga durante las lluvias
+              </h2>
+              <p className="text-slate-200 text-sm md:text-base leading-relaxed">
+                Calcula rutas seguras en tiempo real evitando calles inundadas y alcantarillas destapadas. 
+                Visualiza el recorrido con simulación satelital GPS y consulta al asistente de IA.
+              </p>
+              <div className="pt-2 flex flex-wrap gap-3">
+                <button
+                  onClick={() => onNavigate('mapa')}
+                  className="bg-emerald-500 hover:bg-emerald-600 text-slate-950 font-extrabold px-5 py-2.5 rounded-xl text-sm shadow-lg shadow-emerald-500/25 transition-all flex items-center space-x-2"
+                >
+                  <i data-lucide="compass" className="w-4 h-4 text-slate-950 animate-spin"></i>
+                  <span>Abrir Mapa y Rutas en Vivo</span>
+                </button>
+                <button
+                  onClick={() => onNavigate('asistente')}
+                  className="bg-white/10 hover:bg-white/20 text-white border border-white/20 font-semibold px-5 py-2.5 rounded-xl text-sm backdrop-blur-md transition-all flex items-center space-x-2"
+                >
+                  <i data-lucide="bot" className="w-4 h-4 text-sky-300"></i>
+                  <span>Preguntar a Rutas Seguras IA</span>
+                </button>
+              </div>
+            </div>
+
+            <div className="absolute -right-10 -bottom-10 w-72 h-72 bg-emerald-500/15 rounded-full blur-3xl pointer-events-none"></div>
+          </div>
+
+          {/* Tarjetas de Métricas */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
+            <div className="bg-white dark:bg-slate-900 rounded-2xl p-5 border border-slate-200 dark:border-slate-800 shadow-sm">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">Total Reportes</p>
+                  <h3 className="text-3xl font-extrabold text-slate-900 dark:text-white mt-1">{totalReportes}</h3>
+                </div>
+                <div className="w-12 h-12 rounded-xl bg-blue-50 dark:bg-blue-950/60 text-blue-600 dark:text-blue-400 flex items-center justify-center">
+                  <i data-lucide="clipboard-list" className="w-6 h-6"></i>
+                </div>
+              </div>
+              <div className="mt-4 flex items-center text-xs text-slate-500 dark:text-slate-400">
+                <span className="text-blue-600 font-bold mr-1">100%</span> monitoreados en tiempo real
+              </div>
+            </div>
+
+            <div className="bg-white dark:bg-slate-900 rounded-2xl p-5 border border-slate-200 dark:border-slate-800 shadow-sm">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">Calles Inundadas</p>
+                  <h3 className="text-3xl font-extrabold text-red-600 mt-1">{callesInundadas}</h3>
+                </div>
+                <div className="w-12 h-12 rounded-xl bg-red-50 dark:bg-red-950/60 text-red-600 flex items-center justify-center">
+                  <i data-lucide="waves" className="w-6 h-6"></i>
+                </div>
+              </div>
+              <div className="mt-4 flex items-center text-xs text-red-600 font-medium">
+                Puntos críticos en Barrio Abajo
+              </div>
+            </div>
+
+            <div className="bg-white dark:bg-slate-900 rounded-2xl p-5 border border-slate-200 dark:border-slate-800 shadow-sm">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">Zonas Peligro Alto</p>
+                  <h3 className="text-3xl font-extrabold text-amber-500 mt-1">{zonasPeligrosas}</h3>
+                </div>
+                <div className="w-12 h-12 rounded-xl bg-amber-50 dark:bg-amber-950/60 text-amber-500 flex items-center justify-center">
+                  <i data-lucide="alert-octagon" className="w-6 h-6"></i>
+                </div>
+              </div>
+              <div className="mt-4 flex items-center text-xs text-amber-600 dark:text-amber-400 font-medium">
+                Alcantarillas sin tapa y socavones
+              </div>
+            </div>
+
+            <div className="bg-white dark:bg-slate-900 rounded-2xl p-5 border border-slate-200 dark:border-slate-800 shadow-sm">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">Vías Transitables</p>
+                  <h3 className="text-3xl font-extrabold text-emerald-600 mt-1">{viasTransitables}</h3>
+                </div>
+                <div className="w-12 h-12 rounded-xl bg-emerald-50 dark:bg-emerald-950/60 text-emerald-600 flex items-center justify-center">
+                  <i data-lucide="shield-check" className="w-6 h-6"></i>
+                </div>
+              </div>
+              <div className="mt-4 flex items-center text-xs text-emerald-600 font-medium">
+                Corredores seguros habilitados
+              </div>
+            </div>
+          </div>
+
+          {/* Gráficos y Últimos Reportes */}
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            <div className="bg-white dark:bg-slate-900 rounded-2xl p-6 border border-slate-200 dark:border-slate-800 shadow-sm lg:col-span-1">
+              <h3 className="text-base font-bold text-slate-900 dark:text-white mb-4 flex items-center">
+                <i data-lucide="pie-chart" className="w-5 h-5 mr-2 text-emerald-500"></i>
+                Distribución de Severidad
+              </h3>
+
+              <div className="space-y-4">
+                <div>
+                  <div className="flex justify-between text-xs font-semibold mb-1">
+                    <span className="flex items-center text-red-600">
+                      <span className="w-3 h-3 rounded-full bg-red-500 mr-2"></span>
+                      Peligro Crítico (Rojo)
+                    </span>
+                    <span className="text-slate-700 dark:text-slate-300">
+                      {zonasPeligrosas} ({Math.round((zonasPeligrosas/totalReportes)*100 || 0)}%)
+                    </span>
+                  </div>
+                  <div className="w-full bg-slate-100 dark:bg-slate-800 h-2.5 rounded-full overflow-hidden">
+                    <div className="bg-red-500 h-full rounded-full transition-all duration-500" style={{ width: `${(zonasPeligrosas/totalReportes)*100}%` }}></div>
+                  </div>
+                </div>
+
+                <div>
+                  <div className="flex justify-between text-xs font-semibold mb-1">
+                    <span className="flex items-center text-amber-500">
+                      <span className="w-3 h-3 rounded-full bg-amber-500 mr-2"></span>
+                      Precaución (Amarillo)
+                    </span>
+                    <span className="text-slate-700 dark:text-slate-300">
+                      {zonasPrecaucion} ({Math.round((zonasPrecaucion/totalReportes)*100 || 0)}%)
+                    </span>
+                  </div>
+                  <div className="w-full bg-slate-100 dark:bg-slate-800 h-2.5 rounded-full overflow-hidden">
+                    <div className="bg-amber-500 h-full rounded-full transition-all duration-500" style={{ width: `${(zonasPrecaucion/totalReportes)*100}%` }}></div>
+                  </div>
+                </div>
+
+                <div>
+                  <div className="flex justify-between text-xs font-semibold mb-1">
+                    <span className="flex items-center text-emerald-600">
+                      <span className="w-3 h-3 rounded-full bg-emerald-500 mr-2"></span>
+                      Vías Transitables (Verde)
+                    </span>
+                    <span className="text-slate-700 dark:text-slate-300">
+                      {viasTransitables} ({Math.round((viasTransitables/totalReportes)*100 || 0)}%)
+                    </span>
+                  </div>
+                  <div className="w-full bg-slate-100 dark:bg-slate-800 h-2.5 rounded-full overflow-hidden">
+                    <div className="bg-emerald-500 h-full rounded-full transition-all duration-500" style={{ width: `${(viasTransitables/totalReportes)*100}%` }}></div>
+                  </div>
+                </div>
+              </div>
+
+              <div className="mt-6 p-4 rounded-xl bg-emerald-950/20 border border-emerald-900/40 text-xs text-emerald-300">
+                <p className="font-bold mb-1 flex items-center">
+                  <i data-lucide="radio" className="w-4 h-4 mr-1.5 text-emerald-400"></i>
+                  Modo Radar Satelital Activo
+                </p>
+                <p className="text-slate-300 leading-relaxed">
+                  Las rutas dinámicas se ajustan en tiempo real según los reportes que los ciudadanos ingresan desde sus teléfonos móviles.
+                </p>
+              </div>
+            </div>
+
+            <div className="bg-white dark:bg-slate-900 rounded-2xl p-6 border border-slate-200 dark:border-slate-800 shadow-sm lg:col-span-2">
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-base font-bold text-slate-900 dark:text-white flex items-center">
+                  <i data-lucide="activity" className="w-5 h-5 mr-2 text-sky-600"></i>
+                  Incidentes Comunitarios en Ciénaga
+                </h3>
+                <button
+                  onClick={() => onNavigate('mapa')}
+                  className="text-xs font-bold text-emerald-600 dark:text-emerald-400 hover:underline flex items-center"
+                >
+                  Trazar en tiempo real
+                  <i data-lucide="chevron-right" className="w-4 h-4 ml-0.5"></i>
+                </button>
+              </div>
+
+              <div className="divide-y divide-slate-100 dark:divide-slate-800">
+                {reports.slice(0, 4).map((item) => (
+                  <div key={item.id} className="py-3 flex items-start justify-between gap-4">
+                    <div className="flex items-start space-x-3">
+                      <div className={`w-3.5 h-3.5 rounded-full mt-1 shrink-0 ${
+                        item.severidad === 'peligro' ? 'bg-red-500 ring-4 ring-red-100 dark:ring-red-950' :
+                        item.severidad === 'precaucion' ? 'bg-amber-500 ring-4 ring-amber-100 dark:ring-amber-950' :
+                        'bg-emerald-500 ring-4 ring-emerald-100 dark:ring-emerald-950'
+                      }`}></div>
+                      <div>
+                        <div className="flex items-center space-x-2">
+                          <span className="font-bold text-sm text-slate-900 dark:text-white">
+                            {item.barrio}
+                          </span>
+                          <span className="text-xs text-slate-500 dark:text-slate-400">
+                            &bull; {item.direccion}
+                          </span>
+                        </div>
+                        <p className="text-xs text-slate-600 dark:text-slate-300 mt-0.5 line-clamp-1">
+                          {item.descripcion}
+                        </p>
+                        <div className="flex items-center space-x-3 mt-1 text-[11px] text-slate-400">
+                          <span>{item.fecha}</span>
+                          <span>&bull;</span>
+                          <span className="font-semibold text-slate-500 dark:text-slate-400">{item.nivelAgua}</span>
+                        </div>
+                      </div>
+                    </div>
+
+                    <button
+                      onClick={() => onSelectReport(item)}
+                      className="shrink-0 text-xs px-3 py-1.5 rounded-lg bg-slate-100 hover:bg-emerald-100 text-slate-700 hover:text-emerald-700 dark:bg-slate-800 dark:hover:bg-emerald-950 dark:text-slate-300 dark:hover:text-emerald-300 font-medium transition-colors flex items-center"
+                    >
+                      <i data-lucide="crosshair" className="w-3.5 h-3.5 mr-1"></i>
+                      Ver en radar
+                    </button>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+
+        </div>
+      );
+    }
+
+    // ==========================================
+    // VISTA ASISTENTE DE IA (Rutas Seguras IA)
+    // ==========================================
+    function AiAssistantView({ reports, onNavigateToMap }) {
+      const [messages, setMessages] = useState([
+        {
+          id: "m-1",
+          sender: "ia",
+          text: "¡Hola! Soy **Rutas Seguras IA**, tu asistente inteligente con navegación en tiempo real para Ciénaga, Magdalena.\n\nPuedes consultarme cómo desplazarte de forma segura entre barrios, qué calles están anegadas o qué ruta alternativa evita las alcantarillas abiertas.",
+          timestamp: "Ahora mismo"
+        }
+      ]);
+      const [inputQuery, setInputQuery] = useState("");
+      const [isTyping, setIsTyping] = useState(false);
+      const chatEndRef = useRef(null);
+
+      useEffect(() => {
+        chatEndRef.current?.scrollIntoView({ behavior: "smooth" });
+      }, [messages, isTyping]);
+
+      const QUICK_PROMPTS = [
+        "¿Qué ruta en tiempo real puedo tomar de Kennedy al Centro?",
+        "¿Por qué debo evitar la Calle 13 en Barrio Abajo?",
+        "¿Dónde hay alcantarillas destapadas en Ciénaga?",
+        "¿Cómo está la Carrera 21 en La Floresta para transitar?"
+      ];
+
+      const processAIQuery = (queryText) => {
+        const query = queryText.toLowerCase().trim();
+        const peligros = reports.filter(r => r.severidad === 'peligro');
+        const transitables = reports.filter(r => r.severidad === 'transitable');
+        const alcantarillas = reports.filter(r => r.tipo === 'alcantarilla' || r.descripcion.toLowerCase().includes('alcantarilla'));
+
+        let reply = "";
+        let matchedBarrio = null;
+
+        if (query.includes('kennedy') && query.includes('centro')) {
+          reply = `📍 **Ruta Segura en Tiempo Real: Kennedy ➡️ Centro Histórico**\n\n` +
+                  `⚠️ **Puntos Críticos Bloqueados en el Radar:**\n` +
+                  `- **Calle 28 cerca de la Troncal:** Socavón de 1 metro oculto bajo 35 cm de agua.\n` +
+                  `- **Calle 13 en Barrio Abajo:** Inundación crítica de 45 cm (corte total para motos).\n\n` +
+                  `✅ **Trazado Dinámico Calculado:**\n` +
+                  `1. Desplázate por la Troncal del Caribe hacia el oriente.\n` +
+                  `2. Toma la **Carrera 21 hacia La Floresta**, donde el canal pluvial está drenando eficazmente.\n` +
+                  `3. Sube por Calle 16 y accede al Centro Histórico por la **Calle 7**, la cual tiene cota elevada y está 100% transitable.\n\n` +
+                  `🛰️ *Puedes ver este trazado con GPS en vivo en la pestaña 'Mapa & Rutas en Vivo'.*`;
+          matchedBarrio = "Kennedy";
+        } else if (query.includes('abajo') || query.includes('calle 13')) {
+          reply = `🚨 **Alerta en Barrio Abajo (Calle 13 con Cra 9):**\n\n` +
+                  `Nivel de agua en **45 cm**. Se registran corrientes hacia la Ciénaga que arrastran tapas de registro.\n` +
+                  `💡 **Desvío obligatorio en radar:** Rodear por Calle 16 hacia Carrera 21.`;
+          matchedBarrio = "Barrio Abajo";
+        } else if (query.includes('alcantarilla') || query.includes('tapa')) {
+          reply = `⚠️ **Alcantarillas Peligrosas Detectadas:**\n\n` +
+                  `• **Centro Histórico:** Calle 9 con Cra 12 (Templete) - Tapa abierta invisible bajo 30cm.\n` +
+                  `• **Barrio Abajo:** Calle 13 con Cra 9 - Corriente levantó rejillas.\n\n` +
+                  `🚨 *Regla de oro:* No cruces agua que supere los 15 cm; las trampas quedan totalmente ocultas.`;
+          matchedBarrio = "Centro Histórico";
+        } else {
+          reply = `He procesado tu consulta con la red en tiempo real de Ciénaga.\n\n` +
+                  `Tenemos **${reports.length} reportes activos** en el radar. Si te desplazas hacia el Centro, te sugiero activar la **Skin Radar Vivo** para seguir la telemetría en tiempo real paso a paso.\n\n` +
+                  `⚠️ *Nota preventiva:* Conduce a menos de 25 km/h durante lluvia.`;
+        }
+
+        return { reply, matchedBarrio };
+      };
+
+      const handleSendMessage = (e) => {
+        e?.preventDefault();
+        if (!inputQuery.trim()) return;
+
+        const userText = inputQuery.trim();
+        setMessages(prev => [...prev, {
+          id: `usr-${Date.now()}`,
+          sender: "user",
+          text: userText,
+          timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+        }]);
+        setInputQuery("");
+        setIsTyping(true);
+
+        setTimeout(() => {
+          const { reply, matchedBarrio } = processAIQuery(userText);
+          setMessages(prev => [...prev, {
+            id: `ia-${Date.now()}`,
+            sender: "ia",
+            text: reply,
+            timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+            matchedBarrio
+          }]);
+          setIsTyping(false);
+        }, 550);
+      };
+
+      return (
+        <div className="max-w-4xl mx-auto flex flex-col h-[calc(100vh-120px)] bg-white dark:bg-slate-900 rounded-3xl border border-slate-200 dark:border-slate-800 shadow-xl overflow-hidden">
+          <div className="p-4 bg-gradient-to-r from-[#030712] via-[#091f3a] to-emerald-900 text-white flex items-center justify-between">
+            <div className="flex items-center space-x-3">
+              <div className="w-11 h-11 rounded-2xl bg-gradient-to-tr from-emerald-400 to-sky-600 flex items-center justify-center shadow-lg text-white">
+                <i data-lucide="bot" className="w-6 h-6"></i>
+              </div>
+              <div>
+                <h3 className="font-extrabold text-base flex items-center">
+                  Rutas Seguras IA
+                  <span className="ml-2 text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-500/30 text-emerald-300 border border-emerald-400/30 uppercase">
+                    Tiempo Real
+                  </span>
+                </h3>
+                <p className="text-xs text-emerald-200/80">
+                  Asistente de movilidad con cruce dinámico de incidentes
+                </p>
+              </div>
+            </div>
+          </div>
+
+          <div className="flex-1 p-4 md:p-6 overflow-y-auto space-y-4 bg-slate-50/50 dark:bg-slate-950/40">
+            {messages.map((msg) => (
+              <div key={msg.id} className={`flex flex-col ${msg.sender === 'user' ? 'items-end' : 'items-start'}`}>
+                <div className="flex items-start space-x-2.5 max-w-[85%]">
+                  {msg.sender === 'ia' && (
+                    <div className="w-8 h-8 rounded-xl bg-emerald-600 text-white flex items-center justify-center shrink-0 mt-1 shadow-sm">
+                      <i data-lucide="sparkles" className="w-4 h-4"></i>
+                    </div>
+                  )}
+                  <div className={`p-4 rounded-2xl text-xs md:text-sm leading-relaxed ${
+                    msg.sender === 'user' 
+                      ? 'bg-emerald-600 text-white rounded-tr-none' 
+                      : 'bg-white dark:bg-slate-900 text-slate-800 dark:text-slate-100 rounded-tl-none border border-slate-200 dark:border-slate-800 shadow-sm'
+                  }`}>
+                    <div className="whitespace-pre-line space-y-2">
+                      {msg.text.split('\n').map((paragraph, idx) => {
+                        if (!paragraph) return <div key={idx} className="h-1"></div>;
+                        const parts = paragraph.split(/(\*\*.*?\*\*)/g);
+                        return (
+                          <p key={idx}>
+                            {parts.map((part, pIdx) => {
+                              if (part.startsWith('**') && part.endsWith('**')) {
+                                return <strong key={pIdx} className="font-bold">{part.slice(2, -2)}</strong>;
+                              }
+                              return part;
+                            })}
+                          </p>
+                        );
+                      })}
+                    </div>
+
+                    {msg.matchedBarrio && (
+                      <div className="mt-3 pt-3 border-t border-slate-100 dark:border-slate-800">
+                        <button
+                          onClick={() => onNavigateToMap(msg.matchedBarrio)}
+                          className="bg-emerald-50 dark:bg-emerald-950/60 hover:bg-emerald-100 text-emerald-700 dark:text-emerald-300 px-3 py-1.5 rounded-lg text-xs font-semibold flex items-center transition-colors"
+                        >
+                          <i data-lucide="compass" className="w-3.5 h-3.5 mr-1.5"></i>
+                          Ver trazado dinámico hacia {msg.matchedBarrio}
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+            ))}
+            {isTyping && (
+              <div className="text-xs text-slate-400 flex items-center space-x-2">
+                <i data-lucide="refresh-cw" className="w-4 h-4 animate-spin text-emerald-500"></i>
+                <span>Calculando ruta segura en tiempo real...</span>
+              </div>
+            )}
+            <div ref={chatEndRef} />
+          </div>
+
+          <div className="px-4 py-2 bg-slate-100/70 dark:bg-slate-900/60 border-t border-slate-200 dark:border-slate-800 flex items-center gap-2 overflow-x-auto text-xs whitespace-nowrap">
+            {QUICK_PROMPTS.map((prompt, i) => (
+              <button
+                key={i}
+                onClick={() => setInputQuery(prompt)}
+                className="bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700 px-3 py-1 rounded-full text-xs"
+              >
+                {prompt}
+              </button>
+            ))}
+          </div>
+
+          <form onSubmit={handleSendMessage} className="p-3.5 bg-white dark:bg-slate-900 border-t border-slate-200 dark:border-slate-800 flex items-center space-x-2">
+            <input
+              type="text"
+              value={inputQuery}
+              onChange={(e) => setInputQuery(e.target.value)}
+              placeholder="Pregunta sobre rutas seguras o vías de Ciénaga..."
+              className="flex-1 bg-slate-100 dark:bg-slate-800 text-slate-800 dark:text-slate-100 px-4 py-3 rounded-2xl text-xs md:text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+            />
+            <button
+              type="submit"
+              disabled={!inputQuery.trim() || isTyping}
+              className="bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 text-white p-3 rounded-2xl shadow-md transition-all active:scale-95"
+            >
+              <i data-lucide="send" className="w-5 h-5"></i>
+            </button>
+          </form>
+        </div>
+      );
+    }
+
+    // ==========================================
+    // VISTA REPORTAR INCIDENTE
+    // ==========================================
+    function ReportIncidentView({ onAddReport, onCancel }) {
+      const [barrio, setBarrio] = useState(BARRIOS_CIENAGA[0]);
+      const [otroBarrio, setOtroBarrio] = useState("");
+      const [direccion, setDireccion] = useState("");
+      const [tipo, setTipo] = useState("inundacion");
+      const [severidad, setSeveridad] = useState("peligro");
+      const [nivelAgua, setNivelAgua] = useState("30 cm (Moderado)");
+      const [descripcion, setDescripcion] = useState("");
+      const [fotoPreview, setFotoPreview] = useState(null);
+      const [lat, setLat] = useState(CIENAGA_CENTER[0]);
+      const [lng, setLng] = useState(CIENAGA_CENTER[1]);
+      const [autor, setAutor] = useState("");
+      const [gpsStatus, setGpsStatus] = useState("");
+      const [isSubmitting, setIsSubmitting] = useState(false);
+
+      const handlePhotoUpload = (e) => {
+        const file = e.target.files[0];
+        if (file) {
+          const reader = new FileReader();
+          reader.onloadend = () => {
+            setFotoPreview(reader.result);
+          };
+          reader.readAsDataURL(file);
+        }
+      };
+
+      const handleGetLocation = () => {
+        if (!navigator.geolocation) {
+          setGpsStatus("Geolocalización no soportada por el navegador");
+          return;
+        }
+        setGpsStatus("Detectando coordenadas GPS...");
+        navigator.geolocation.getCurrentPosition(
+          (pos) => {
+            setLat(Number(pos.coords.latitude.toFixed(5)));
+            setLng(Number(pos.coords.longitude.toFixed(5)));
+            setGpsStatus("Coordenadas obtenidas con éxito");
+          },
+          (err) => {
+            setGpsStatus("No se pudo obtener GPS. Usando centro de Ciénaga.");
+            console.warn(err);
+          },
+          { timeout: 8000 }
+        );
+      };
+
+      const handleBarrioChange = (selected) => {
+        setBarrio(selected);
+        const coords = BARRIOS_DATA[selected];
+        if (coords) {
+          setLat(coords[0]);
+          setLng(coords[1]);
+        }
+      };
+
+      const handleSubmit = (e) => {
+        e.preventDefault();
+        setIsSubmitting(true);
+
+        const finalBarrio = barrio === "Otro" ? (otroBarrio || "Sector Ciénaga") : barrio;
+
+        const newReport = {
+          id: `rep-${Date.now()}`,
+          barrio: finalBarrio,
+          direccion: direccion || "Dirección no especificada",
+          tipo: tipo,
+          severidad: severidad,
+          nivelAgua: nivelAgua,
+          descripcion: descripcion || "Reporte generado por ciudadano en Ciénaga.",
+          lat: lat,
+          lng: lng,
+          fecha: "Hace instantes",
+          autor: autor.trim() || "Ciudadano Vigilante",
+          foto: fotoPreview || "https://images.unsplash.com/photo-1547683905-f686c993aae5?auto=format&fit=crop&w=600&q=80",
+          verificado: true
+        };
+
+        setTimeout(() => {
+          onAddReport(newReport);
+          setIsSubmitting(false);
+        }, 400);
+      };
+
+      return (
+        <div className="max-w-3xl mx-auto bg-white dark:bg-slate-900 rounded-3xl p-6 md:p-8 border border-slate-200 dark:border-slate-800 shadow-xl">
+          <div className="flex items-center space-x-3 pb-6 border-b border-slate-100 dark:border-slate-800">
+            <div className="w-12 h-12 rounded-2xl bg-red-100 dark:bg-red-950/60 text-red-600 flex items-center justify-center shrink-0">
+              <i data-lucide="alert-triangle" className="w-6 h-6"></i>
+            </div>
+            <div>
+              <h2 className="text-xl font-extrabold text-slate-900 dark:text-white">
+                Reportar Calle Inundada o Peligro
+              </h2>
+              <p className="text-xs text-slate-500 dark:text-slate-400">
+                Se sincroniza en tiempo real con el mapa y actualiza las rutas seguras al instante.
+              </p>
+            </div>
+          </div>
+
+          <form onSubmit={handleSubmit} className="mt-6 space-y-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 uppercase mb-1.5">
+                  Barrio o Sector de Ciénaga *
+                </label>
+                <select
+                  value={barrio}
+                  onChange={(e) => handleBarrioChange(e.target.value)}
+                  className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-slate-100 rounded-xl px-4 py-2.5 text-xs md:text-sm outline-none"
+                  required
+                >
+                  {BARRIOS_CIENAGA.map((b) => (
+                    <option key={b} value={b}>{b}</option>
+                  ))}
+                  <option value="Otro">Otro sector...</option>
+                </select>
+                {barrio === "Otro" && (
+                  <input
+                    type="text"
+                    value={otroBarrio}
+                    onChange={(e) => setOtroBarrio(e.target.value)}
+                    placeholder="Escribe el nombre del barrio"
+                    className="mt-2 w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 rounded-xl px-4 py-2 text-xs"
+                    required
+                  />
+                )}
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 uppercase mb-1.5">
+                  Calle / Carrera / Referencia *
+                </label>
+                <input
+                  type="text"
+                  value={direccion}
+                  onChange={(e) => setDireccion(e.target.value)}
+                  placeholder="Ej: Calle 13 entre Carreras 8 y 10"
+                  className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-slate-100 rounded-xl px-4 py-2.5 text-xs md:text-sm outline-none"
+                  required
+                />
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div>
+                <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 uppercase mb-1.5">
+                  Tipo de Incidente *
+                </label>
+                <select
+                  value={tipo}
+                  onChange={(e) => setTipo(e.target.value)}
+                  className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-slate-100 rounded-xl px-4 py-2.5 text-xs md:text-sm outline-none"
+                >
+                  <option value="inundacion">Calle Inundada / Desbordada</option>
+                  <option value="alcantarilla">Alcantarilla Sin Tapa</option>
+                  <option value="hueco">Socavón / Hueco Peligroso</option>
+                  <option value="transitable">Vía Despejada / Transitable</option>
+                  <option value="arbol">Árbol o Poste Caído</option>
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 uppercase mb-1.5">
+                  Nivel de Peligro *
+                </label>
+                <select
+                  value={severidad}
+                  onChange={(e) => setSeveridad(e.target.value)}
+                  className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-slate-100 rounded-xl px-4 py-2.5 text-xs md:text-sm outline-none font-semibold"
+                >
+                  <option value="peligro" className="text-red-600">🔴 Peligro Crítico (Rojo)</option>
+                  <option value="precaucion" className="text-amber-500">🟡 Precaución (Amarillo)</option>
+                  <option value="transitable" className="text-emerald-600">🟢 Transitable (Verde)</option>
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 uppercase mb-1.5">
+                  Nivel de Agua
+                </label>
+                <select
+                  value={nivelAgua}
+                  onChange={(e) => setNivelAgua(e.target.value)}
+                  className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-slate-100 rounded-xl px-4 py-2.5 text-xs md:text-sm outline-none"
+                >
+                  <option value="Seco / 0 cm">Seco / Desagüe normal</option>
+                  <option value="10 - 20 cm (Encharcado)">10 - 20 cm (Encharcado)</option>
+                  <option value="30 cm (Moderado)">30 cm (Cubre aceras)</option>
+                  <option value="> 45 cm (Crítico)">Mayor a 45 cm (Imposible cruzar)</option>
+                </select>
+              </div>
+            </div>
+
+            <div>
+              <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 uppercase mb-1.5">
+                Descripción del Estado *
+              </label>
+              <textarea
+                rows="3"
+                value={descripcion}
+                onChange={(e) => setDescripcion(e.target.value)}
+                placeholder="Detalla si hay corriente fuerte, tapas levantadas, autos atrapados, etc."
+                className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-slate-100 rounded-xl p-3 text-xs md:text-sm outline-none"
+                required
+              ></textarea>
+            </div>
+
+            <div className="p-4 rounded-2xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 space-y-3">
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-bold text-slate-700 dark:text-slate-300 uppercase flex items-center">
+                  <i data-lucide="map-pin" className="w-4 h-4 mr-1 text-emerald-500"></i>
+                  Geolocalización GPS
+                </span>
+                <button
+                  type="button"
+                  onClick={handleGetLocation}
+                  className="text-xs px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white font-semibold flex items-center"
+                >
+                  <i data-lucide="crosshair" className="w-3.5 h-3.5 mr-1.5"></i>
+                  Capturar mi GPS
+                </button>
+              </div>
+              <div className="grid grid-cols-2 gap-3 text-xs font-mono">
+                <input
+                  type="number"
+                  step="0.0001"
+                  value={lat}
+                  onChange={(e) => setLat(parseFloat(e.target.value))}
+                  className="p-2 rounded-lg bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700"
+                />
+                <input
+                  type="number"
+                  step="0.0001"
+                  value={lng}
+                  onChange={(e) => setLng(parseFloat(e.target.value))}
+                  className="p-2 rounded-lg bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700"
+                />
+              </div>
+              {gpsStatus && <p className="text-[11px] text-emerald-500">{gpsStatus}</p>}
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 items-center">
+              <div>
+                <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 uppercase mb-1.5">
+                  Evidencia Fotográfica
+                </label>
+                <div className="flex items-center space-x-3">
+                  <label className="cursor-pointer bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 px-4 py-2 rounded-xl text-xs font-medium text-slate-700 dark:text-slate-200 flex items-center border border-dashed border-slate-300">
+                    <i data-lucide="camera" className="w-4 h-4 mr-2 text-emerald-500"></i>
+                    Subir Foto
+                    <input type="file" accept="image/*" onChange={handlePhotoUpload} className="hidden"/>
+                  </label>
+                  {fotoPreview && (
+                    <img src={fotoPreview} alt="Preview" className="w-10 h-10 rounded-lg object-cover border"/>
+                  )}
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 uppercase mb-1.5">
+                  Tu Nombre / Identificador
+                </label>
+                <input
+                  type="text"
+                  value={autor}
+                  onChange={(e) => setAutor(e.target.value)}
+                  placeholder="Ej: Vecino Barrio Abajo"
+                  className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-slate-100 rounded-xl px-4 py-2 text-xs md:text-sm"
+                />
+              </div>
+            </div>
+
+            <div className="pt-4 border-t border-slate-100 dark:border-slate-800 flex items-center justify-end space-x-3">
+              <button
+                type="button"
+                onClick={onCancel}
+                className="px-5 py-2.5 rounded-xl text-slate-600 dark:text-slate-400 text-xs md:text-sm font-semibold"
+              >
+                Cancelar
+              </button>
+              <button
+                type="submit"
+                disabled={isSubmitting}
+                className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold px-6 py-2.5 rounded-xl text-xs md:text-sm shadow-lg shadow-emerald-600/30 flex items-center space-x-2"
+              >
+                <i data-lucide="check" className="w-4 h-4"></i>
+                <span>{isSubmitting ? "Publicando..." : "Publicar en Mapa en Tiempo Real"}</span>
+              </button>
+            </div>
+          </form>
+        </div>
+      );
+    }
+
+    // ==========================================
+    // VISTA LÍNEAS DE EMERGENCIA
+    // ==========================================
+    function EmergenciesView() {
+      const contactos = [
+        {
+          entidad: "Cuerpo de Bomberos Voluntarios de Ciénaga",
+          linea: "119 / 310 706 9452",
+          descripcion: "Atención inmediata de inundaciones graves, rescate de vehículos y personas atrapadas.",
+          color: "border-red-500 bg-red-50/40 dark:bg-red-950/20"
+        },
+        {
+          entidad: "Defensa Civil Colombiana - Seccional Ciénaga",
+          linea: "144 / 320 237 8190",
+          descripcion: "Evacuación preventiva, apoyo comunitario en barrios críticos y albergues.",
+          color: "border-orange-500 bg-orange-50/40 dark:bg-orange-950/20"
+        },
+        {
+          entidad: "Cruz Roja Colombiana - Ciénaga",
+          linea: "132",
+          descripcion: "Primeros auxilios médicos en terreno y atención prehospitalaria.",
+          color: "border-rose-500 bg-rose-50/40 dark:bg-rose-950/20"
+        },
+        {
+          entidad: "Policía Nacional - Distrito Ciénaga",
+          linea: "123 / (605) 482 1212",
+          descripcion: "Control de orden público y desvíos viales intermunicipales.",
+          color: "border-blue-500 bg-blue-50/40 dark:bg-blue-950/20"
+        }
+      ];
+
+      return (
+        <div className="max-w-4xl mx-auto space-y-6">
+          <div className="bg-white dark:bg-slate-900 rounded-3xl p-6 md:p-8 border border-slate-200 dark:border-slate-800 shadow-sm">
+            <h2 className="text-xl font-extrabold text-slate-900 dark:text-white mb-2 flex items-center">
+              <i data-lucide="phone-forwarded" className="w-6 h-6 mr-2 text-red-600"></i>
+              Líneas Directas de Emergencia en Ciénaga, Magdalena
+            </h2>
+            <p className="text-xs text-slate-500 dark:text-slate-400 mb-6">
+              Comunícate inmediatamente si observas vehículos atrapados o aumento violento del nivel pluvial.
+            </p>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {contactos.map((c, i) => (
+                <div key={i} className={`p-5 rounded-2xl border-l-4 ${c.color} border border-slate-200/80 dark:border-slate-800 shadow-xs space-y-2`}>
+                  <h3 className="font-bold text-sm text-slate-900 dark:text-white">{c.entidad}</h3>
+                  <div className="text-base font-extrabold text-emerald-600 dark:text-emerald-400 font-mono">
+                    📞 {c.linea}
+                  </div>
+                  <p className="text-xs text-slate-600 dark:text-slate-300 leading-relaxed">
+                    {c.descripcion}
+                  </p>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      );
+    }
+
+    // Renderizar App
+    const root = ReactDOM.createRoot(document.getElementById('root'));
+    root.render(<App />);
+  </script>
+</body>
+</html>
